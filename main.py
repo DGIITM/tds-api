@@ -2,28 +2,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
 import os
+import json
 
-# Create FastAPI app FIRST
 app = FastAPI()
-
-# Create OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Request model
 class CommentRequest(BaseModel):
     comment: str
 
-# Response model
 class SentimentResponse(BaseModel):
     sentiment: str
     rating: int
 
-# Structured output schema
-class SentimentSchema(BaseModel):
-    sentiment: str
-    rating: int
-
-# Endpoint
 @app.post("/comment", response_model=SentimentResponse)
 async def analyze_comment(data: CommentRequest):
 
@@ -31,18 +21,24 @@ async def analyze_comment(data: CommentRequest):
         raise HTTPException(status_code=400, detail="Comment cannot be empty")
 
     try:
-        response = client.responses.parse(
+        response = client.chat.completions.create(
             model="gpt-4.1-mini",
-            input=[
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Return ONLY valid JSON with keys: sentiment (positive, negative, neutral) and rating (1-5 integer)."
+                },
                 {
                     "role": "user",
                     "content": f"Analyze the sentiment of this comment: {data.comment}"
                 }
             ],
-            response_format=SentimentSchema
+            response_format={"type": "json_object"}
         )
 
-        return response.output_parsed
+        result = json.loads(response.choices[0].message.content)
+
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
