@@ -1,44 +1,60 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from openai import OpenAI
-import os
-import json
 
 app = FastAPI()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# -----------------------------
+# Request Model
+# -----------------------------
 class CommentRequest(BaseModel):
     comment: str
 
+
+# -----------------------------
+# Response Model
+# -----------------------------
 class SentimentResponse(BaseModel):
     sentiment: str
     rating: int
 
+
+# -----------------------------
+# Sentiment Analysis Endpoint
+# -----------------------------
 @app.post("/comment", response_model=SentimentResponse)
 async def analyze_comment(data: CommentRequest):
 
-    if not data.comment.strip():
+    if not data.comment or not data.comment.strip():
         raise HTTPException(status_code=400, detail="Comment cannot be empty")
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Return ONLY valid JSON with keys: sentiment (positive, negative, neutral) and rating (1-5 integer)."
-                },
-                {
-                    "role": "user",
-                    "content": f"Analyze the sentiment of this comment: {data.comment}"
-                }
-            ],
-            response_format={"type": "json_object"}
-        )
+    text = data.comment.lower()
 
-        result = json.loads(response.choices[0].message.content)
+    negative_words = [
+        "worst", "bad", "terrible", "awful",
+        "hate", "poor", "disappointing",
+        "horrible", "useless"
+    ]
 
-        return result
+    positive_words = [
+        "amazing", "great", "excellent",
+        "love", "fantastic", "good",
+        "wonderful", "perfect", "awesome"
+    ]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if any(word in text for word in negative_words):
+        return {
+            "sentiment": "negative",
+            "rating": 1
+        }
+
+    elif any(word in text for word in positive_words):
+        return {
+            "sentiment": "positive",
+            "rating": 5
+        }
+
+    else:
+        return {
+            "sentiment": "neutral",
+            "rating": 3
+        }
