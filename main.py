@@ -29,15 +29,18 @@ async def analyze_comment(data: CommentRequest):
     text = data.comment.lower()
 
     negative_words = [
-        "worst", "bad", "terrible", "awful",
-        "hate", "poor", "disappointing",
-        "horrible", "useless"
+        "worst", "bad", "terrible", "awful", "hate",
+        "poor", "disappointing", "horrible", "useless",
+        "disgraceful", "never", "below expectations",
+        "damaged", "broken", "delay", "late",
+        "frustrating", "disappointed", "problem",
+        "issue", "slow"
     ]
 
     positive_words = [
-        "amazing", "great", "excellent",
-        "love", "fantastic", "good",
-        "wonderful", "perfect", "awesome"
+        "amazing", "great", "excellent", "love",
+        "fantastic", "good", "wonderful",
+        "perfect", "awesome", "satisfied"
     ]
 
     if any(word in text for word in negative_words):
@@ -45,6 +48,9 @@ async def analyze_comment(data: CommentRequest):
 
     elif any(word in text for word in positive_words):
         return {"sentiment": "positive", "rating": 5}
+
+    elif "okay" in text or "average" in text:
+        return {"sentiment": "neutral", "rating": 3}
 
     else:
         return {"sentiment": "neutral", "rating": 3}
